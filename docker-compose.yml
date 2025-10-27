@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  postgres-users:
+    image: postgres:15-alpine
+    container_name: postgres-users
+    environment:
+      POSTGRES_USER: users_db
+      POSTGRES_PASSWORD: users_password
+      POSTGRES_DB: users_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-users-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U users_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-orders:
+    image: postgres:15-alpine
+    container_name: postgres-orders
+    environment:
+      POSTGRES_USER: orders_db
+      POSTGRES_PASSWORD: orders_password
+      POSTGRES_DB: orders_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-orders-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-users:
+    build: ./service_users
+    container_name: service-users
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres-users
+      DB_PORT: 5432
+      DB_USER: users_db
+      DB_PASSWORD: users_password
+      DB_NAME: users_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 24h
+    depends_on:
+      postgres-users:
+        condition: service_healthy
+    restart: unless-stopped
+
+  service-orders:
+    build: ./service_orders
+    container_name: service-orders
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      DB_HOST: postgres-orders
+      DB_PORT: 5432
+      DB_USER: orders_db
+      DB_PASSWORD: orders_password
+      DB_NAME: orders_db
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_EXPIRES_IN: 24h
+      USERS_SERVICE_URL: http://service-users:3001
+    depends_on:
+      postgres-orders:
+        condition: service_healthy
+      service-users:
+        condition: service_started
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./api_gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docs:/app/docs:ro
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      USERS_SERVICE_URL: http://service-users:3001
+      ORDERS_SERVICE_URL: http://service-orders:3002
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+    depends_on:
+      - service-users
+      - service-orders
+    restart: unless-stopped
+
+volumes:
+  postgres-users-data:
+  postgres-orders-data:
+
