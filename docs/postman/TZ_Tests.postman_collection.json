@@ -1,0 +1,489 @@
+{
+  "info": {
+    "name": "TZ Tests - Construction Company API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register - success",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"testpassword\",\n  \"name\": \"User One\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.code === 201);",
+                  "const json = pm.response.json();",
+                  "pm.test('success=true', () => json.success === true);",
+                  "pm.test('user.id exists', () => json.data && json.data.user && !!json.data.user.id);",
+                  "// persist for next steps",
+                  "if (json.data && json.data.user) {",
+                  "  pm.collectionVariables.set('user1_email', json.data.user.email);",
+                  "  pm.collectionVariables.set('user1_password', 'testpassword');",
+                  "}",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('token_user1', json.data.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - duplicate email (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user1_email}}\",\n  \"password\": \"testpassword\",\n  \"name\": \"Duplicate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 or 400', () => [409,400].includes(pm.response.code));",
+                  "const j = pm.response.json();",
+                  "pm.test('success=false', () => j.success === false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - success",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user1_email}}\",\n  \"password\": \"{{user1_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const json = pm.response.json();",
+                  "pm.test('token present', () => json.data && !!json.data.token);",
+                  "if (json.data && json.data.token) pm.collectionVariables.set('token_user1', json.data.token);",
+                  "if (json.data && json.data.user && json.data.user.id) pm.collectionVariables.set('user1_id', json.data.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - wrong password (401)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user1_email}}\",\n  \"password\": \"wrongpass\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.code === 401);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register user2",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"testpassword\",\n  \"name\": \"User Two\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.code === 201);",
+                  "const j = pm.response.json();",
+                  "if (j.data && j.data.token) pm.collectionVariables.set('token_user2', j.data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Protected - without token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.code === 401);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Protected - invalid token (401)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer invalid.token.here" } ],
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.code === 401);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get user profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('success=true', () => j.success === true);",
+                  "pm.test('has user data', () => j.data && j.data.id && j.data.email && j.data.name);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update user profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('success=true', () => j.success === true);",
+                  "pm.test('name updated', () => j.data && j.data.name === 'Updated User Name');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get user profile - no token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/v1/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "v1", "profile"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.code === 401);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create order (authorized)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"product\": \"Cement\", \"quantity\": 2 } ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "v1", "orders"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.code === 201);",
+                  "const json = pm.response.json();",
+                  "pm.test('success=true', () => json.success === true);",
+                  "pm.test('status=created', () => json.data && json.data.status === 'created');",
+                  "if (json.data && json.data.id) pm.collectionVariables.set('order_id', json.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create order - no token (401)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\\n  \\\"items\\\": [ { \\\"product\\\": \\\"Bricks\\\", \\\"quantity\\\": 1 } ]\\n}" },
+            "url": { "raw": "{{baseUrl}}/orders/v1/orders", "host": ["{{baseUrl}}"], "path": ["orders","v1","orders"] }
+          },
+          "event": [ { "listen": "test", "script": { "type":"text/javascript", "exec": [ "pm.test('401 Unauthorized', () => pm.response.code === 401);"] } } ]
+        },
+        {
+          "name": "Get my order by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders/{{order_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "v1", "orders", "{{order_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('same order id', () => j.data && j.data.id === pm.collectionVariables.get('order_id'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my orders (pagination, page=1, limit=2, sort=total_amount asc)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token_user1}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders?page=1&limit=2&sortBy=total_amount&sortOrder=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders","v1","orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "2" },
+                { "key": "sortBy", "value": "total_amount" },
+                { "key": "sortOrder", "value": "asc" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('has orders[]', () => j.data && Array.isArray(j.data.orders));",
+                  "pm.test('has pagination', () => j.data && j.data.pagination && typeof j.data.pagination.page === 'number');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my orders (pagination, page=2)",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token_user1}}" } ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders?page=2&limit=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders","v1","orders"],
+              "query": [ { "key": "page", "value": "2" }, { "key": "limit", "value": "2" } ]
+            }
+          },
+          "event": [ { "listen":"test", "script": { "type":"text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.code === 200);",
+            "const j = pm.response.json();",
+            "pm.test('pagination.page=2', () => j.data && j.data.pagination && j.data.pagination.page === 2);"
+          ] } } ]
+        },
+        {
+          "name": "Try update foreign order (403/404)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_user2}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders/{{order_id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "v1", "orders", "{{order_id}}", "status"]
+            }
+          },
+          "event": [
+            { "listen": "test", "script": { "type":"text/javascript", "exec": [ "pm.test('403 or 404', () => [403,404].includes(pm.response.code));" ] } }
+          ]
+        },
+        {
+          "name": "Cancel own order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders/v1/orders/{{order_id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "v1", "orders", "{{order_id}}", "status"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.code === 200);",
+                  "const j = pm.response.json();",
+                  "pm.test('status=cancelled', () => j.data && j.data.status === 'cancelled');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" }
+  ]
+}
