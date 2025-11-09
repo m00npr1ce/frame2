@@ -1,0 +1,554 @@
+{
+	"info": {
+		"name": "Construction Company Task Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_collection_link": "https://api.postman.com/collections/12345-c611a5c-1234-5678-9012-abcdef123456"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{$randomEmail}}\",\n    \"password\": \"testpassword\",\n    \"name\": \"Test User {{$randomInt}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/v1/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"v1",
+								"register"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Generate random email and name for unique registration\n",
+									"const randomId = Math.floor(Math.random() * 1000000);\n",
+									"pm.environment.set(\"$randomEmail\", `test_user_${randomId}@example.com`);\n",
+									"pm.environment.set(\"$randomInt\", randomId);\n",
+									"pm.environment.set(\"lastRegisteredEmail\", pm.environment.get(\"$randomEmail\"));\n",
+									"pm.environment.set(\"lastRegisteredPassword\", \"testpassword\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"User ID and Token are present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'user\');\n    pm.expect(responseJson.data.user).to.have.property(\'id\');\n    pm.expect(responseJson.data).to.have.property(\'token\');\n});\n\n// Save token and user ID for subsequent requests\nif (responseJson.success && responseJson.data && responseJson.data.token && responseJson.data.user && responseJson.data.user.id) {\n    pm.environment.set(\"authToken\", responseJson.data.token);\n    pm.environment.set(\"userId\", responseJson.data.user.id);\n    console.log(\"authToken set:\", pm.environment.get(\"authToken\").substring(0, 20) + \"...\");\n    console.log(\"userId set:\", pm.environment.get(\"userId\"));\n}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{lastRegisteredEmail}}\",\n    \"password\": \"{{lastRegisteredPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/v1/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"v1",
+								"login"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Token is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'token\');\n});\n\n// Save token and user ID for subsequent requests\nif (responseJson.success && responseJson.data && responseJson.data.token && responseJson.data.user && responseJson.data.user.id) {\n    pm.environment.set(\"authToken\", responseJson.data.token);\n    pm.environment.set(\"userId\", responseJson.data.user.id);\n    console.log(\"authToken set:\", pm.environment.get(\"authToken\").substring(0, 20) + \"...\");\n    console.log(\"userId set:\", pm.environment.get(\"userId\"));\n}"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/v1/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"v1",
+								"profile"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"User data is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'id\');\n    pm.expect(responseJson.data).to.have.property(\'email\');\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Test User {{$randomInt}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/v1/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"v1",
+								"profile"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"User name updated\", function () {\n    pm.expect(responseJson.data.name).to.include(\"Updated Test User\");\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get All Users (Admin Only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/v1/users?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"v1",
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Users array is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'users\');\n    pm.expect(responseJson.data.users).to.be.an(\'array\');\n});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"items\": [\n        {\n            \"product\": \"Cement {{$randomInt}}\",\n            \"quantity\": 5\n        },\n        {\n            \"product\": \"Bricks\",\n            \"quantity\": 10\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {\n    pm.response.to.have.status(201);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Order ID is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'id\');\n});\n\n// Save order ID for subsequent requests\nif (responseJson.success && responseJson.data && responseJson.data.id) {\n    pm.environment.set(\"orderId\", responseJson.data.id);\n    console.log(\"orderId set:\", pm.environment.get(\"orderId\"));\n}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get All Orders (My Orders)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders?page=1&limit=10&sortBy=created_at&sortOrder=desc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "created_at"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc"
+								}
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Orders array is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'orders\');\n    pm.expect(responseJson.data.orders).to.be.an(\'array\');\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Order data is present\", function () {\n    pm.expect(responseJson.data).to.have.property(\'id\');\n    pm.expect(responseJson.data.id).to.eql(pm.environment.get(\"orderId\"));\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"in_progress\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders/{{orderId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders",
+								"{{orderId}}",
+								"status"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Order status updated to in_progress\", function () {\n    pm.expect(responseJson.data.status).to.eql(\"in_progress\");\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cancel Order",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"status\": \"cancelled\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders/{{orderId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders",
+								"{{orderId}}",
+								"status"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});\n\npm.test(\"Order status updated to cancelled\", function () {\n    pm.expect(responseJson.data.status).to.eql(\"cancelled\");\n});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete Order",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/orders/v1/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"orders",
+								"v1",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {\n    pm.response.to.have.status(200);\n});\n\nconst responseJson = pm.response.json();\npm.test(\"Response indicates success\", function () {\n    pm.expect(responseJson.success).to.be.true;\n});"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "randomEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "randomInt",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lastRegisteredEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lastRegisteredPassword",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
