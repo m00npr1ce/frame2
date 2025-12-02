@@ -10,5 +10,11 @@ dist/
 build/
 coverage/
 .nyc_output/
-
-
+.gitignore
+Construction_Company_API.postman_collection.json
+create_commits_v2.py
+create_commits.py
+create_commits.sh
+fix_commits.py
+Local_Development.postman_environment.json
+Техническое задание 2 (1).dock
